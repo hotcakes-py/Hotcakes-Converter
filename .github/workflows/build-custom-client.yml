@@ -50,11 +50,28 @@ jobs:
           echo "C:\vcpkg" | Out-File -FilePath $env:GITHUB_PATH -Append
         shell: pwsh
 
-      - name: Install vcpkg dependencies
+      - name: Setup VCPKG (manifest mode)
         working-directory: rustdesk
         run: |
-          C:\vcpkg\vcpkg integrate install
-          C:\vcpkg\vcpkg install opus --triplet x64-windows
+          # Verificar que vcpkg.json existe
+          if (Test-Path "vcpkg.json") {
+            Write-Host "✅ vcpkg.json encontrado"
+            Get-Content vcpkg.json
+          } else {
+            Write-Host "⚠️ vcpkg.json no encontrado, creando..."
+            @'
+{
+  "name": "rustdesk",
+  "version": "1.0.0",
+  "dependencies": [
+    "opus"
+  ]
+}
+'@ | Out-File -FilePath vcpkg.json -Encoding utf8
+          }
+          
+          # Instalar dependencias usando el manifiesto
+          C:\vcpkg\vcpkg install --triplet x64-windows
         shell: pwsh
 
       - name: Build RustDesk
