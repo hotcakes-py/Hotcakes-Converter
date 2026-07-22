@@ -1,0 +1,42 @@
+name: Build Custom RustDesk Client
+
+on:
+  workflow_dispatch:
+    inputs:
+      config_json:
+        description: 'Configuración del cliente en formato JSON'
+        required: true
+        type: string
+      version:
+        description: 'Versión del cliente'
+        required: false
+        default: '1.0.0'
+        type: string
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+
+      - name: Build Client
+        run: |
+          echo "🚀 Iniciando compilación con configuración: ${{ github.event.inputs.config_json }}"
+          echo "📦 Versión: ${{ github.event.inputs.version }}"
+          # Aquí irían los comandos reales para compilar RustDesk
+          # Por ahora, creamos un archivo de ejemplo
+          echo "Este es un cliente de prueba" > cliente.txt
+          echo "Configuración: ${{ github.event.inputs.config_json }}" >> cliente.txt
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: rustdesk-client
+          path: cliente.txt
