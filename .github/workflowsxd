@@ -1,0 +1,91 @@
+name: Build Custom RustDesk Client
+
+on:
+  workflow_dispatch:
+    inputs:
+      config_json:
+        description: 'Configuración del cliente en formato JSON'
+        required: true
+        type: string
+      version:
+        description: 'Versión del cliente'
+        required: false
+        default: '1.4.9'
+        type: string
+
+jobs:
+  build-windows:
+    name: Build Windows Client
+    runs-on: windows-latest
+    steps:
+      - name: Checkout RustDesk source with submodules
+        uses: actions/checkout@v4
+        with:
+          repository: rustdesk/rustdesk
+          ref: master
+          path: rustdesk
+          submodules: true
+          fetch-depth: 0
+
+      - name: Setup Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          target: x86_64-pc-windows-msvc
+          override: true
+
+      - name: Install dependencies (CMake, Ninja)
+        run: |
+          choco install cmake --installargs 'ADD_CMAKE_TO_PATH=System' -y
+          choco install ninja -y
+        shell: pwsh
+
+      - name: Install VCPKG (manual)
+        run: |
+          cd C:\
+          git clone https://github.com/Microsoft/vcpkg.git
+          cd vcpkg
+          .\bootstrap-vcpkg.bat
+          echo "VCPKG_ROOT=C:\vcpkg" | Out-File -FilePath $env:GITHUB_ENV -Append
+          echo "C:\vcpkg" | Out-File -FilePath $env:GITHUB_PATH -Append
+        shell: pwsh
+
+      - name: Setup VCPKG (manifest mode)
+        working-directory: rustdesk
+        run: |
+          # Verificar que vcpkg.json existe
+          if (Test-Path "vcpkg.json") {
+            Write-Host "✅ vcpkg.json encontrado"
+            Get-Content vcpkg.json
+          } else {
+            Write-Host "⚠️ vcpkg.json no encontrado, creando..."
+            @'
+{
+  "name": "rustdesk",
+  "version": "1.0.0",
+  "dependencies": [
+    "opus"
+  ]
+}
+'@ | Out-File -FilePath vcpkg.json -Encoding utf8
+          }
+          
+          # Instalar dependencias usando el manifiesto
+          C:\vcpkg\vcpkg install --triplet x64-windows
+        shell: pwsh
+
+      - name: Build RustDesk
+        working-directory: rustdesk
+        run: |
+          cargo build --release --target x86_64-pc-windows-msvc
+        shell: pwsh
+        env:
+          VCPKG_ROOT: C:\vcpkg
+          VCPKG_TARGET_TRIPLET: x64-windows
+          VCPKGRS_DYNAMIC: 1
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: rustdesk-client-windows
+          path: rustdesk/target/x86_64-pc-windows-msvc/release/rustdesk.exe
