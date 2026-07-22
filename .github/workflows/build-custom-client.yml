@@ -10,33 +10,42 @@ on:
       version:
         description: 'Versión del cliente'
         required: false
-        default: '1.0.0'
+        default: '1.4.9'
         type: string
 
 jobs:
-  build:
-    runs-on: ubuntu-latest
+  build-windows:
+    name: Build Windows Client
+    runs-on: windows-latest
     steps:
-      - name: Checkout code
+      - name: Checkout RustDesk source
         uses: actions/checkout@v4
+        with:
+          repository: rustdesk/rustdesk
+          ref: master
+          path: rustdesk
 
       - name: Setup Rust
         uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
+          target: x86_64-pc-windows-msvc
           override: true
 
-      - name: Build Client
+      - name: Install dependencies
         run: |
-          echo "🚀 Iniciando compilación con configuración: ${{ github.event.inputs.config_json }}"
-          echo "📦 Versión: ${{ github.event.inputs.version }}"
-          # Aquí irían los comandos reales para compilar RustDesk
-          # Por ahora, creamos un archivo de ejemplo
-          echo "Este es un cliente de prueba" > cliente.txt
-          echo "Configuración: ${{ github.event.inputs.config_json }}" >> cliente.txt
+          choco install cmake --installargs 'ADD_CMAKE_TO_PATH=System' -y
+          choco install ninja -y
+        shell: pwsh
+
+      - name: Build RustDesk
+        working-directory: rustdesk
+        run: |
+          cargo build --release --target x86_64-pc-windows-msvc
+        shell: pwsh
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: rustdesk-client
-          path: cliente.txt
+          name: rustdesk-client-windows
+          path: rustdesk/target/x86_64-pc-windows-msvc/release/rustdesk.exe
