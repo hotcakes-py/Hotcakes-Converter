@@ -24,8 +24,8 @@ jobs:
           repository: rustdesk/rustdesk
           ref: master
           path: rustdesk
-          submodules: true  # ✅ Esto es clave
-          fetch-depth: 0    # ✅ Para tener todo el historial
+          submodules: true
+          fetch-depth: 0
 
       - name: Setup Rust
         uses: actions-rs/toolchain@v1
@@ -34,10 +34,24 @@ jobs:
           target: x86_64-pc-windows-msvc
           override: true
 
-      - name: Install dependencies
+      - name: Install dependencies (CMake, Ninja, VCPKG)
         run: |
           choco install cmake --installargs 'ADD_CMAKE_TO_PATH=System' -y
           choco install ninja -y
+          choco install vcpkg -y
+        shell: pwsh
+
+      - name: Set VCPKG_ROOT and add to PATH
+        run: |
+          echo "VCPKG_ROOT=C:\vcpkg" | Out-File -FilePath $env:GITHUB_ENV -Append
+          echo "C:\vcpkg" | Out-File -FilePath $env:GITHUB_PATH -Append
+        shell: pwsh
+
+      - name: Install vcpkg dependencies
+        working-directory: rustdesk
+        run: |
+          vcpkg integrate install
+          vcpkg install opus --triplet x64-windows
         shell: pwsh
 
       - name: Build RustDesk
@@ -45,6 +59,9 @@ jobs:
         run: |
           cargo build --release --target x86_64-pc-windows-msvc
         shell: pwsh
+        env:
+          VCPKG_ROOT: C:\vcpkg
+          VCPKG_TARGET_TRIPLET: x64-windows
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
