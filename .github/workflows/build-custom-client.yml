@@ -18,12 +18,14 @@ jobs:
     name: Build Windows Client
     runs-on: windows-latest
     steps:
-      - name: Checkout RustDesk source
+      - name: Checkout RustDesk source with submodules
         uses: actions/checkout@v4
         with:
           repository: rustdesk/rustdesk
           ref: master
           path: rustdesk
+          submodules: true  # ✅ Esto es clave
+          fetch-depth: 0    # ✅ Para tener todo el historial
 
       - name: Setup Rust
         uses: actions-rs/toolchain@v1
