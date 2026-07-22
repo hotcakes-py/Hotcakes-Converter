@@ -34,15 +34,18 @@ jobs:
           target: x86_64-pc-windows-msvc
           override: true
 
-      - name: Install dependencies (CMake, Ninja, VCPKG)
+      - name: Install dependencies (CMake, Ninja)
         run: |
           choco install cmake --installargs 'ADD_CMAKE_TO_PATH=System' -y
           choco install ninja -y
-          choco install vcpkg -y
         shell: pwsh
 
-      - name: Set VCPKG_ROOT and add to PATH
+      - name: Install VCPKG (manual)
         run: |
+          cd C:\
+          git clone https://github.com/Microsoft/vcpkg.git
+          cd vcpkg
+          .\bootstrap-vcpkg.bat
           echo "VCPKG_ROOT=C:\vcpkg" | Out-File -FilePath $env:GITHUB_ENV -Append
           echo "C:\vcpkg" | Out-File -FilePath $env:GITHUB_PATH -Append
         shell: pwsh
@@ -50,8 +53,8 @@ jobs:
       - name: Install vcpkg dependencies
         working-directory: rustdesk
         run: |
-          vcpkg integrate install
-          vcpkg install opus --triplet x64-windows
+          C:\vcpkg\vcpkg integrate install
+          C:\vcpkg\vcpkg install opus --triplet x64-windows
         shell: pwsh
 
       - name: Build RustDesk
@@ -62,6 +65,7 @@ jobs:
         env:
           VCPKG_ROOT: C:\vcpkg
           VCPKG_TARGET_TRIPLET: x64-windows
+          VCPKGRS_DYNAMIC: 1
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
